@@ -302,6 +302,14 @@ button.secondary:hover {
   background: #565d68;
 }
 
+button.danger {
+  background: #b42318;
+}
+
+button.danger:hover {
+  background: #8f1c13;
+}
+
 .status {
   margin-bottom: 8px;
   font-weight: 600;

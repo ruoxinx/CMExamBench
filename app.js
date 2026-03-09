@@ -40,6 +40,7 @@ const els = {
   submit: document.getElementById("submitBtn"),
   runBatch: document.getElementById("runBatchBtn"),
   save: document.getElementById("saveBtn"),
+  stop: document.getElementById("stopBtn"),
   reset: document.getElementById("resetBtn"),
   status: document.getElementById("status"),
   progress: document.getElementById("batchProgress"),
@@ -54,6 +55,9 @@ let previewUrls = [];
 let selectedFiles = [];
 let selectedJsonlFiles = [];
 let inputMode = "single";
+const openAiUploadedFileCache = new Map();
+let stopRequested = false;
+let activeRequestController = null;
 
 init();
 
@@ -73,6 +77,7 @@ function init() {
   els.batchImageBase.addEventListener("input", previewBatchFiles);
   els.submit.addEventListener("click", handleSubmitSingle);
   els.runBatch.addEventListener("click", handleSubmitBatch);
+  els.stop.addEventListener("click", handleStop);
   els.save.addEventListener("click", saveRunToFile);
   els.reset.addEventListener("click", resetUI);
   onProviderChange();
@@ -309,6 +314,7 @@ async function handleSubmitSingle() {
   }
 
   setLoading(true);
+  stopRequested = false;
   els.output.textContent = "";
   els.meta.textContent = "";
   clearResultTable();
@@ -322,11 +328,15 @@ async function handleSubmitSingle() {
     let completed = 0;
 
     for (const combo of combos) {
+      if (stopRequested) break;
       const apiKey = getApiKeyForProvider(combo.providerKey);
+      const openAiContentParts =
+        combo.providerKey === "openai" ? await prepareOpenAiContentParts(apiKey, encodedImages) : null;
       for (let i = 0; i < runCount; i += 1) {
+        if (stopRequested) break;
         setStatus(`Running ${combo.label} (${i + 1}/${runCount})...`, false);
         const startedAt = performance.now();
-        const payload = buildPayload(combo.providerKey, combo.model, userPrompt, encodedImages, temperature);
+        const payload = buildPayload(combo.providerKey, combo.model, userPrompt, encodedImages, temperature, openAiContentParts);
         const result = await sendRequest(combo.providerKey, apiKey, payload);
         const elapsedMs = Math.round(performance.now() - startedAt);
 
@@ -359,7 +369,7 @@ async function handleSubmitSingle() {
     const totalMs = runResults.reduce((sum, r) => sum + r.elapsedMs, 0);
     const avgMs = runResults.length ? Math.round(totalMs / runResults.length) : 0;
     els.meta.textContent = `Combos: ${combos.length} | Runs: ${runResults.length} | Total time: ${totalMs} ms | Avg/run: ${avgMs} ms | Temperature: ${temperature}`;
-    setStatus("Completed.", false);
+    setStatus(stopRequested ? "Stopped by user." : "Completed.", false);
 
     lastRunData = {
       mode: "single",
@@ -379,8 +389,13 @@ async function handleSubmitSingle() {
       output: runResults
     };
   } catch (error) {
-    setStatus(`Error: ${error.message}`, true);
+    if (stopRequested && error?.name === "AbortError") {
+      setStatus("Stopped by user.", false);
+    } else {
+      setStatus(`Error: ${error.message}`, true);
+    }
   } finally {
+    activeRequestController = null;
     setLoading(false);
   }
 }
@@ -402,6 +417,7 @@ async function handleSubmitBatch() {
   }
 
   setLoading(true);
+  stopRequested = false;
   els.output.textContent = "";
   els.meta.textContent = "";
   clearResultTable();
@@ -445,18 +461,23 @@ async function handleSubmitBatch() {
     appendOutput(`Loaded ${questions.length} questions from ${batchSources.length} file(s).\n\n`);
 
     for (let qIdx = 0; qIdx < questions.length; qIdx += 1) {
+      if (stopRequested) break;
       const q = questions[qIdx];
       const qPrompt = buildQuestionPrompt(q);
       const userPrompt = buildUserPrompt(qPrompt);
       const encodedImages = await loadQuestionImages(q, q.__source.baseUrl);
 
       for (const combo of combos) {
+        if (stopRequested) break;
         const apiKey = getApiKeyForProvider(combo.providerKey);
+        const openAiContentParts =
+          combo.providerKey === "openai" ? await prepareOpenAiContentParts(apiKey, encodedImages) : null;
         for (let runIdx = 0; runIdx < runCount; runIdx += 1) {
+          if (stopRequested) break;
           setStatus(`Q${qIdx + 1}/${questions.length} | ${combo.label} | ${runIdx + 1}/${runCount}`, false);
           const startedAt = performance.now();
 
-          const payload = buildPayload(combo.providerKey, combo.model, userPrompt, encodedImages, temperature);
+          const payload = buildPayload(combo.providerKey, combo.model, userPrompt, encodedImages, temperature, openAiContentParts);
           const result = await sendRequest(combo.providerKey, apiKey, payload);
           const elapsedMs = Math.round(performance.now() - startedAt);
           const text = result.text || "(No text in response)";
@@ -490,7 +511,7 @@ async function handleSubmitBatch() {
     const totalTime = records.reduce((sum, r) => sum + r.elapsedMs, 0);
     const avgTime = records.length ? Math.round(totalTime / records.length) : 0;
     els.meta.textContent = `Batch done | Questions: ${questions.length} | Combos: ${combos.length} | Runs: ${records.length} | Total time: ${totalTime} ms | Avg/run: ${avgTime} ms | Temperature: ${temperature}`;
-    setStatus("Batch completed.", false);
+    setStatus(stopRequested ? "Stopped by user." : "Batch completed.", false);
 
     lastRunData = {
       mode: "batch",
@@ -505,8 +526,13 @@ async function handleSubmitBatch() {
       output: records
     };
   } catch (error) {
-    setStatus(`Error: ${error.message}`, true);
+    if (stopRequested && error?.name === "AbortError") {
+      setStatus("Stopped by user.", false);
+    } else {
+      setStatus(`Error: ${error.message}`, true);
+    }
   } finally {
+    activeRequestController = null;
     setLoading(false);
   }
 }
@@ -647,48 +673,83 @@ async function loadQuestionImages(question, baseUrl) {
 }
 
 async function tryLoadImageFromUri(uri, baseUrl) {
-  try {
-    const fullUrl = resolveImageUri(uri, baseUrl);
-    if (!fullUrl) return null;
-    const resp = await fetch(fullUrl);
-    if (!resp.ok) return null;
-    const blob = await resp.blob();
-    const base64 = await blobToBase64(blob);
-    return { mimeType: blob.type || "image/png", base64 };
-  } catch {
-    return null;
+  const candidates = resolveImageUriCandidates(uri, baseUrl);
+  for (const fullUrl of candidates) {
+    try {
+      const resp = await fetch(fullUrl, { method: "GET" });
+      if (!resp.ok) continue;
+      const blob = await resp.blob();
+      const base64 = await blobToBase64(blob);
+      return { mimeType: blob.type || "image/png", base64 };
+    } catch {
+      // try next candidate
+    }
   }
+  return null;
 }
 
 function resolveImageUri(uri, baseUrl) {
+  const candidates = resolveImageUriCandidates(uri, baseUrl);
+  return candidates.length ? candidates[0] : null;
+}
+
+function resolveImageUriCandidates(uri, baseUrl) {
   const raw = String(uri || "").trim();
-  if (!raw) return null;
-  if (/^data:/i.test(raw) || /^https?:\/\//i.test(raw)) return raw;
-  if (!baseUrl) return null;
-  try {
-    return new URL(raw, baseUrl).href;
-  } catch {
-    return null;
+  if (!raw) return [];
+  if (/^data:/i.test(raw) || /^https?:\/\//i.test(raw)) return [raw];
+
+  const out = [];
+  const pushUnique = (value) => {
+    if (value && !out.includes(value)) out.push(value);
+  };
+  const tryResolve = (value, base) => {
+    try {
+      return new URL(value, base).href;
+    } catch {
+      return null;
+    }
+  };
+
+  // Primary: user-specified image base.
+  if (baseUrl) {
+    pushUnique(tryResolve(raw, baseUrl));
+    // If baseUrl already points to data/, and uri starts with data/, avoid data/data.
+    if (raw.toLowerCase().startsWith("data/")) {
+      pushUnique(tryResolve(raw.slice(5), baseUrl));
+    }
   }
+
+  // Fallbacks relative to current page.
+  pushUnique(tryResolve(raw, window.location.href));
+  pushUnique(tryResolve(raw, window.location.origin));
+
+  return out;
 }
 
 async function canResolveImageUri(uri, baseUrl, cache) {
-  const resolved = resolveImageUri(uri, baseUrl);
-  if (!resolved) return false;
-  if (/^data:/i.test(resolved)) return true;
-  if (cache.has(resolved)) return cache.get(resolved);
-  try {
-    let resp = await fetch(resolved, { method: "HEAD" });
-    if (resp.status === 405) {
-      resp = await fetch(resolved, { method: "GET" });
+  const candidates = resolveImageUriCandidates(uri, baseUrl);
+  if (!candidates.length) return false;
+
+  for (const resolved of candidates) {
+    if (/^data:/i.test(resolved)) return true;
+    if (cache.has(resolved)) {
+      if (cache.get(resolved)) return true;
+      continue;
     }
-    const ok = resp.ok;
-    cache.set(resolved, ok);
-    return ok;
-  } catch {
-    cache.set(resolved, false);
-    return false;
+    try {
+      // Some local/static servers fail HEAD even when GET works.
+      let resp = await fetch(resolved, { method: "HEAD" });
+      if (!resp.ok) {
+        resp = await fetch(resolved, { method: "GET" });
+      }
+      const ok = resp.ok;
+      cache.set(resolved, ok);
+      if (ok) return true;
+    } catch {
+      cache.set(resolved, false);
+    }
   }
+  return false;
 }
 
 function blobToBase64(blob) {
@@ -703,8 +764,14 @@ function blobToBase64(blob) {
   });
 }
 
-function buildPayload(providerKey, model, userPrompt, encodedImages, temperature) {
+function buildPayload(providerKey, model, userPrompt, encodedImages, temperature, openAiContentParts = null) {
   if (providerKey === "openai") {
+    const contentParts = Array.isArray(openAiContentParts)
+      ? openAiContentParts
+      : encodedImages.map((img) => ({
+          type: "input_image",
+          image_url: `data:${img.mimeType};base64,${img.base64}`
+        }));
     return {
       model,
       temperature,
@@ -713,10 +780,7 @@ function buildPayload(providerKey, model, userPrompt, encodedImages, temperature
           role: "user",
           content: [
             { type: "input_text", text: userPrompt },
-            ...encodedImages.map((img) => ({
-              type: "input_image",
-              image_url: `data:${img.mimeType};base64,${img.base64}`
-            }))
+            ...contentParts
           ]
         }
       ]
@@ -760,14 +824,21 @@ async function sendRequest(providerKey, apiKey, payload) {
   }
 
   let response;
+  activeRequestController = new AbortController();
   try {
     response = await fetch(provider.endpoint, {
       method: "POST",
       headers,
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: activeRequestController.signal
     });
   } catch (error) {
+    if (error?.name === "AbortError") {
+      throw error;
+    }
     throw new Error(`Network error calling ${provider.label}: ${error.message}`);
+  } finally {
+    activeRequestController = null;
   }
 
   const data = await response.json();
@@ -808,6 +879,81 @@ function parseProviderResponse(providerKey, data) {
 
 function buildExamplePayload(providerKey, model, userPrompt, temperature) {
   return buildPayload(providerKey, model, userPrompt, [{ mimeType: "image/png", base64: "<base64-image>" }], temperature);
+}
+
+function isPdfMimeType(mimeType) {
+  return String(mimeType || "").toLowerCase() === "application/pdf";
+}
+
+function base64ToBlob(base64, mimeType) {
+  const binary = atob(base64);
+  const len = binary.length;
+  const bytes = new Uint8Array(len);
+  for (let i = 0; i < len; i += 1) {
+    bytes[i] = binary.charCodeAt(i);
+  }
+  return new Blob([bytes], { type: mimeType || "application/octet-stream" });
+}
+
+function cacheKeyForEncodedAsset(asset) {
+  const mime = String(asset?.mimeType || "").toLowerCase();
+  const b64 = String(asset?.base64 || "");
+  return `${mime}|${b64.length}|${b64.slice(0, 64)}|${b64.slice(-64)}`;
+}
+
+async function uploadOpenAiFile(apiKey, encoded, filename = "upload.pdf") {
+  const body = new FormData();
+  const blob = base64ToBlob(encoded.base64, encoded.mimeType);
+  body.append("file", blob, filename);
+  body.append("purpose", "user_data");
+
+  const req = {
+    method: "POST",
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body
+  };
+
+  let response = await fetch("https://api.openai.com/v1/files", req);
+  if (!response.ok) {
+    // Backward compatibility fallback.
+    body.set("purpose", "assistants");
+    response = await fetch("https://api.openai.com/v1/files", req);
+  }
+
+  let data = {};
+  try {
+    data = await response.json();
+  } catch {
+    data = {};
+  }
+  if (!response.ok) {
+    throw new Error(data?.error?.message || `OpenAI Files upload failed (HTTP ${response.status})`);
+  }
+  if (!data?.id) {
+    throw new Error("OpenAI Files upload succeeded without file id.");
+  }
+  return data.id;
+}
+
+async function prepareOpenAiContentParts(apiKey, encodedImages) {
+  const parts = [];
+  for (const encoded of encodedImages || []) {
+    if (isPdfMimeType(encoded?.mimeType)) {
+      const cacheKey = cacheKeyForEncodedAsset(encoded);
+      let fileId = openAiUploadedFileCache.get(cacheKey);
+      if (!fileId) {
+        fileId = await uploadOpenAiFile(apiKey, encoded, "attachment.pdf");
+        openAiUploadedFileCache.set(cacheKey, fileId);
+      }
+      parts.push({ type: "input_file", file_id: fileId });
+    } else {
+      parts.push({
+        type: "input_image",
+        image_url: `data:${encoded.mimeType};base64,${encoded.base64}`
+      });
+    }
+  }
+  return parts;
 }
 
 function buildUserPrompt(promptText) {
@@ -856,8 +1002,17 @@ function getRunCount() {
 function setLoading(isLoading) {
   els.submit.disabled = isLoading;
   els.runBatch.disabled = isLoading;
+  els.stop.disabled = !isLoading;
   els.reset.disabled = isLoading;
   els.save.disabled = isLoading;
+}
+
+function handleStop() {
+  stopRequested = true;
+  if (activeRequestController) {
+    activeRequestController.abort();
+  }
+  setStatus("Stopping after current request...", false);
 }
 
 function setStatus(message, isError) {

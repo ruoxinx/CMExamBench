@@ -109,7 +109,6 @@
         </div>
 
         <div id="batchInputSection" class="hidden">
-          <h3>Batch Evaluation</h3>
           <label>
             Upload JSONL file(s)
             <input id="jsonlFileInput" type="file" accept=".jsonl,application/jsonl,text/plain" multiple />
@@ -126,6 +125,7 @@
         <div class="actions">
           <button id="submitBtn" type="button">Run</button>
           <button id="runBatchBtn" type="button">Run Batch</button>
+          <button id="stopBtn" type="button" class="danger" disabled>Stop</button>
           <button id="saveBtn" type="button" class="secondary">Save Results</button>
           <button id="resetBtn" type="button" class="secondary">Reset</button>
         </div>
