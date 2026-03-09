@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Construction Management Certification Exam Benchmark</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <main class="container">
+    <header class="hero">
+      <div class="hero-row">
+        <h1>Construction Management Certification Exam Benchmark</h1>
+        <a
+          class="github-link"
+          href="https://github.com/ruoxinx/CMExamBench"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+          title="GitHub"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M8 0C3.58 0 0 3.58 0 8a8.01 8.01 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="panel" aria-labelledby="model-settings-title">
+        <h2 id="model-settings-title">Model Settings</h2>
+        <div class="grid">
+          <div class="full-width selector-grid">
+            <div class="selector-box">
+              <div class="selector-head">
+                <span>Providers</span>
+                <div class="selector-actions">
+                  <button id="providerAllBtn" type="button" class="mini">All</button>
+                  <button id="providerNoneBtn" type="button" class="mini secondary">None</button>
+                </div>
+              </div>
+              <div id="providerChecklist" class="checklist"></div>
+            </div>
+
+            <div class="selector-box">
+              <div class="selector-head">
+                <span>Models</span>
+                <div class="selector-actions">
+                  <button id="modelAllBtn" type="button" class="mini">All</button>
+                  <button id="modelNoneBtn" type="button" class="mini secondary">None</button>
+                </div>
+              </div>
+              <div id="modelChecklist" class="checklist"></div>
+            </div>
+          </div>
+
+          <label>
+            Temperature
+            <input id="temperatureInput" type="number" min="0" max="1" step="0.01" value="0" />
+          </label>
+
+          <label>
+            Running Times
+            <input id="runCountInput" type="number" min="1" max="20" step="1" value="1" />
+          </label>
+
+          <label class="full-width">
+            OpenAI API Key
+            <input id="openaiApiKeyInput" type="password" placeholder="Enter OpenAI API key" autocomplete="off" />
+          </label>
+
+          <label class="full-width">
+            Anthropic API Key
+            <input id="anthropicApiKeyInput" type="password" placeholder="Enter Anthropic API key" autocomplete="off" />
+          </label>
+
+          <label class="checkbox-row">
+            <input id="showApiKeysToggle" type="checkbox" />
+            Show API keys
+          </label>
+        </div>
+
+        <p class="note">Each submission starts a new chat session (no memory/history).</p>
+
+        <h3>Example Request Body</h3>
+        <pre id="requestExample" class="example"></pre>
+      </section>
+
+      <section class="panel" aria-labelledby="input-title">
+        <h2 id="input-title">Input</h2>
+
+        <div class="mode-switch" role="group" aria-label="Input mode">
+          <button id="singleModeBtn" type="button" class="mode-btn active" aria-pressed="true">Single Question</button>
+          <button id="batchModeBtn" type="button" class="mode-btn" aria-pressed="false">Batch Evaluation</button>
+        </div>
+
+        <div id="singleInputSection">
+          <label>
+            <textarea id="promptInput" rows="8" placeholder="Ask a question..."></textarea>
+          </label>
+
+          <label>
+            Images (optional, multiple)
+            <input id="imageInput" type="file" accept="image/*" multiple />
+          </label>
+          <div id="imageList" class="file-list">No images selected.</div>
+          <div id="imagePreview" class="image-preview" aria-live="polite"></div>
+        </div>
+
+        <div id="batchInputSection" class="hidden">
+          <h3>Batch Evaluation</h3>
+          <label>
+            Upload JSONL file(s)
+            <input id="jsonlFileInput" type="file" accept=".jsonl,application/jsonl,text/plain" multiple />
+          </label>
+          <div id="jsonlFileList" class="jsonl-list">No JSONL files selected.</div>
+          <label>
+            Batch Image Base Path
+            <input id="batchImageBaseInput" type="text" placeholder="/cert_eval/" value="/cert_eval/" />
+          </label>
+          <div class="note">Batch uses all questions in uploaded JSONL files.</div>
+          <div id="batchPreview" class="batch-preview">No JSONL file loaded.</div>
+        </div>
+
+        <div class="actions">
+          <button id="submitBtn" type="button">Run</button>
+          <button id="runBatchBtn" type="button">Run Batch</button>
+          <button id="saveBtn" type="button" class="secondary">Save Results</button>
+          <button id="resetBtn" type="button" class="secondary">Reset</button>
+        </div>
+        <label class="checkbox-row actions-note">
+          <input id="structuredOutputToggle" type="checkbox" />
+          Enforce Structured Output (answer and explanation)
+        </label>
+      </section>
+    </div>
+
+    <section class="panel" aria-labelledby="output-title">
+      <h2 id="output-title">Output</h2>
+      <div id="status" class="status" aria-live="polite">Idle</div>
+      <div class="progress-wrap">
+        <progress id="batchProgress" max="100" value="0"></progress>
+        <span id="batchProgressText">0%</span>
+      </div>
+      <pre id="outputBox" class="output" tabindex="0"></pre>
+      <div id="meta" class="meta"></div>
+      <h3>Result Table</h3>
+      <div class="table-wrap">
+        <table id="resultTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Question ID</th>
+              <th>Provider</th>
+              <th>Model</th>
+              <th>Run</th>
+              <th>Latency (ms)</th>
+              <th>Expected</th>
+              <th>Predicted</th>
+            </tr>
+          </thead>
+          <tbody id="resultTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
