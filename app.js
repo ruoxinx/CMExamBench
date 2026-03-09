@@ -788,6 +788,32 @@ function buildPayload(providerKey, model, userPrompt, encodedImages, temperature
   }
 
   if (providerKey === "anthropic") {
+    const anthropicContent = [{ type: "text", text: userPrompt }];
+    for (const img of encodedImages || []) {
+      const mime = String(img?.mimeType || "").toLowerCase();
+      if (mime === "application/pdf") {
+        anthropicContent.push({
+          type: "document",
+          source: {
+            type: "base64",
+            media_type: "application/pdf",
+            data: img.base64
+          }
+        });
+        continue;
+      }
+      if (["image/jpeg", "image/png", "image/gif", "image/webp"].includes(mime)) {
+        anthropicContent.push({
+          type: "image",
+          source: {
+            type: "base64",
+            media_type: mime,
+            data: img.base64
+          }
+        });
+      }
+    }
+
     return {
       model,
       temperature,
@@ -795,17 +821,7 @@ function buildPayload(providerKey, model, userPrompt, encodedImages, temperature
       messages: [
         {
           role: "user",
-          content: [
-            { type: "text", text: userPrompt },
-            ...encodedImages.map((img) => ({
-              type: "image",
-              source: {
-                type: "base64",
-                media_type: img.mimeType,
-                data: img.base64
-              }
-            }))
-          ]
+          content: anthropicContent
         }
       ]
     };
