@@ -676,7 +676,7 @@ async function tryLoadImageFromUri(uri, baseUrl) {
   const candidates = resolveImageUriCandidates(uri, baseUrl);
   for (const fullUrl of candidates) {
     try {
-      const resp = await fetch(fullUrl, { method: "GET" });
+      const resp = await fetch(fullUrl, { method: "GET", cache: "no-store" });
       if (!resp.ok) continue;
       const blob = await resp.blob();
       const base64 = await blobToBase64(blob);
@@ -738,9 +738,9 @@ async function canResolveImageUri(uri, baseUrl, cache) {
     }
     try {
       // Some local/static servers fail HEAD even when GET works.
-      let resp = await fetch(resolved, { method: "HEAD" });
+      let resp = await fetch(resolved, { method: "HEAD", cache: "no-store" });
       if (!resp.ok) {
-        resp = await fetch(resolved, { method: "GET" });
+        resp = await fetch(resolved, { method: "GET", cache: "no-store" });
       }
       const ok = resp.ok;
       cache.set(resolved, ok);
