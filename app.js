@@ -976,7 +976,7 @@ function buildUserPrompt(promptText) {
   const parts = [promptText.trim()];
   if (els.structuredOutputToggle.checked) {
     parts.push("");
-    parts.push('Return JSON only with keys: "answer", "explanation".');
+    parts.push('Answer the question and return JSON with keys: "explanations", "answer".');
     parts.push('Where "answer" is one of "A","B","C","D".');
   }
   return parts.join("\n").trim();
