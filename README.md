@@ -37,7 +37,7 @@ This web application evaluates OpenAI and Anthropic models using single prompts 
 ## Start the App
 
 ```
-python "./server.py" --host 127.0.0.1 --port 8000
+python3 "./server.py" --host 127.0.0.1 --port 8000
 ```
 
 Open:
