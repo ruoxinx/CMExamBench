@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Construction Management Certification Exam Benchmark</title>
+  <link rel="icon" href="favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<<<<<<< HEAD
+<body>
+  <main class="container">
+    <header class="hero">
+      <div class="hero-row">
+        <h1>Construction Management Certification Exam Benchmark</h1>
+        <a
+          class="github-link"
+          href="https://github.com/ruoxinx/CMExamBench"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+          title="GitHub"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M8 0C3.58 0 0 3.58 0 8a8.01 8.01 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="panel" aria-labelledby="model-settings-title">
+        <h2 id="model-settings-title">Model Settings</h2>
+        <div class="grid">
+          <div class="full-width selector-grid">
+            <div class="selector-box">
+              <div class="selector-head">
+                <span>Providers</span>
+                <div class="selector-actions">
+                  <button id="providerAllBtn" type="button" class="mini">All</button>
+                  <button id="providerNoneBtn" type="button" class="mini secondary">None</button>
+                </div>
+              </div>
+              <div id="providerChecklist" class="checklist"></div>
+            </div>
+
+            <div class="selector-box">
+              <div class="selector-head">
+                <span>Models</span>
+                <div class="selector-actions">
+                  <button id="modelAllBtn" type="button" class="mini">All</button>
+                  <button id="modelNoneBtn" type="button" class="mini secondary">None</button>
+                </div>
+              </div>
+              <div id="modelChecklist" class="checklist"></div>
+            </div>
+          </div>
+
+          <label>
+            Temperature
+            <input id="temperatureInput" type="number" min="0" max="1" step="0.01" value="0" />
+          </label>
+
+          <label>
+            Running Times
+            <input id="runCountInput" type="number" min="1" max="20" step="1" value="1" />
+          </label>
+
+          <label class="full-width">
+            OpenAI API Key
+            <input id="openaiApiKeyInput" type="password" placeholder="Enter OpenAI API key" autocomplete="off" />
+          </label>
+
+          <label class="full-width">
+            Anthropic API Key
+            <input id="anthropicApiKeyInput" type="password" placeholder="Enter Anthropic API key" autocomplete="off" />
+          </label>
+
+          <label class="checkbox-row">
+            <input id="showApiKeysToggle" type="checkbox" />
+            Show API keys
+          </label>
+        </div>
+
+        <p class="note">Each submission starts a new chat session (no memory/history).</p>
+
+        <h3>Example Request Body</h3>
+        <pre id="requestExample" class="example"></pre>
+      </section>
+
+      <section class="panel" aria-labelledby="input-title">
+        <h2 id="input-title">Input</h2>
+
+        <div class="mode-switch" role="group" aria-label="Input mode">
+          <button id="singleModeBtn" type="button" class="mode-btn active" aria-pressed="true">Single Question</button>
+          <button id="batchModeBtn" type="button" class="mode-btn" aria-pressed="false">Batch Evaluation</button>
+          <button id="exposureModeBtn" type="button" class="mode-btn" aria-pressed="false">Exposure Search</button>
+          <button id="memorModeBtn"   type="button" class="mode-btn" aria-pressed="false">Memorization Test</button>
+        </div>
+
+        <div id="singleInputSection">
+          <label>
+            <textarea id="promptInput" rows="8" placeholder="Ask a question..."></textarea>
+          </label>
+
+          <label>
+            Images (optional, multiple)
+            <input id="imageInput" type="file" accept="image/*" multiple />
+          </label>
+          <div id="imageList" class="file-list">No images selected.</div>
+          <div id="imagePreview" class="image-preview" aria-live="polite"></div>
+        </div>
+
+        <div id="batchInputSection" class="hidden">
+          <label>
+            Upload JSONL file(s)
+            <input id="jsonlFileInput" type="file" accept=".jsonl,application/jsonl,text/plain" multiple />
+          </label>
+          <div id="jsonlFileList" class="jsonl-list">No JSONL files selected.</div>
+          <label>
+            Batch Image Base Path
+            <input id="batchImageBaseInput" type="text" placeholder="/cert_eval/" value="/cert_eval/" />
+          </label>
+          <div class="note">Batch uses all questions in uploaded JSONL files.</div>
+          <div id="batchPreview" class="batch-preview">No JSONL file loaded.</div>
+        </div>
+
+        <div id="exposureInputSection" class="hidden">
+          <div class="exposure-settings">
+            <div class="cert-selector">
+              <span class="field-label">Certification Datasets</span>
+              <div class="cert-checks">
+                <label class="checkbox-row"><input type="checkbox" class="cert-check" value="CAC" checked /> CAC (100 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="cert-check" value="CACM" checked /> CACM (50 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="cert-check" value="CCM" checked /> CCM (50 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="cert-check" value="CPC" checked /> CPC (489 q)</label>
+              </div>
+            </div>
+            <div class="exposure-params">
+              <label>
+                Sample Size
+                <input id="exposureSampleSize" type="number" min="1" max="500" step="1" value="100" />
+              </label>
+              <label class="checkbox-row" style="align-self:end">
+                <input id="exposureSearchAll" type="checkbox" />
+                Search All Questions
+              </label>
+              <label>
+                Random Seed
+                <input id="exposureSeed" type="number" min="0" step="1" value="42" title="Fixed seed ensures the same questions are drawn each run" />
+              </label>
+              <label>
+                Query Length (chars)
+                <input id="exposureQueryLen" type="number" min="30" max="200" step="10" value="120" />
+              </label>
+              <label title="N-gram window size. Brown et al. (2020) use N=13 for full documents; N=10 is the default setting used here for short exam questions.">
+                N-gram Size (N)
+                <input id="exposureNgramN" type="number" min="3" max="13" step="1" value="10" />
+              </label>
+            </div>
+            <div class="exposure-engines">
+              <span class="field-label">Search Engines</span>
+              <label class="checkbox-row">
+                <input type="checkbox" id="useBraveSearch" checked />
+                Brave Search API (API key required — returns real web snippets)
+              </label>
+            </div>
+            <div id="braveKeyRow" class="engine-key-group">
+              <label class="full-width">
+                Brave Search API Key
+                <input id="braveApiKeyInput" type="password" placeholder="Enter Brave Search API key" autocomplete="off" />
+              </label>
+            </div>
+            <p class="note">This exposure analysis now uses Brave Search snippets as the paper-reportable web evidence. Questions with no retrieved Brave snippets are marked inconclusive rather than exposed.</p>
+          </div>
+        </div>
+
+        <div id="memorInputSection" class="hidden">
+          <div class="exposure-settings">
+            <div class="cert-selector">
+              <span class="field-label">Certification Datasets</span>
+              <div class="cert-checks">
+                <label class="checkbox-row"><input type="checkbox" class="memor-cert-check" value="CAC"  checked /> CAC (100 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="memor-cert-check" value="CACM" checked /> CACM (50 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="memor-cert-check" value="CCM"  checked /> CCM (50 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="memor-cert-check" value="CPC"  checked /> CPC (489 q)</label>
+              </div>
+            </div>
+            <div class="exposure-params">
+              <label>Sample Size <input id="memorSampleSize" type="number" min="1" max="200" step="1" value="50" /></label>
+              <label>Random Seed <input id="memorSeed"       type="number" min="0" step="1"   value="42" title="Same seed as Exposure Search for comparable samples" /></label>
+            </div>
+            <div class="exposure-engines">
+              <span class="field-label">Tests to Run</span>
+              <label class="checkbox-row">
+                <input type="checkbox" id="runTSGuessing" checked />
+                TS-Guessing — mask correct option, model fills blank (Deng et al., NAACL 2024)
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="runOptionShuffle" checked />
+                Option Shuffling — permute A/B/C/D labels, compare accuracy (Zhou et al., 2024)
+              </label>
+            </div>
+            <p class="note">Uses the model(s) selected in Model Settings. Only questions with an "answer" field are tested. Random baseline for 4-choice TS-Guessing = 25%.</p>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="submitBtn" type="button">Run</button>
+          <button id="runBatchBtn" type="button">Run Batch</button>
+          <button id="runExposureBtn" type="button" class="hidden">Run Exposure Search</button>
+          <button id="runMemorBtn"    type="button" class="hidden">Run Memorization Test</button>
+          <button id="stopBtn" type="button" class="danger" disabled>Stop</button>
+          <button id="saveBtn" type="button" class="secondary">Save Results</button>
+          <button id="resetBtn" type="button" class="secondary">Reset</button>
+        </div>
+        <label class="checkbox-row actions-note">
+          <input id="structuredOutputToggle" type="checkbox" />
+          Enforce Structured Output (answer and explanation)
+        </label>
+      </section>
+    </div>
+
+    <section class="panel" aria-labelledby="output-title">
+      <h2 id="output-title">Output</h2>
+      <div id="status" class="status" aria-live="polite">Idle</div>
+      <div class="progress-wrap">
+        <progress id="batchProgress" max="100" value="0"></progress>
+        <span id="batchProgressText">0%</span>
+      </div>
+      <pre id="outputBox" class="output" tabindex="0"></pre>
+      <div id="meta" class="meta"></div>
+      <h3>Result Table</h3>
+      <div class="table-wrap">
+        <table id="resultTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Question ID</th>
+              <th>Provider</th>
+              <th>Model</th>
+              <th>Run</th>
+              <th>Latency (ms)</th>
+              <th>Expected</th>
+              <th>Predicted</th>
+            </tr>
+          </thead>
+          <tbody id="resultTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+    <section class="panel hidden" id="exposureResultsSection" aria-labelledby="exposure-results-title">
+      <h2 id="exposure-results-title">Exposure Search Results</h2>
+      <div id="exposureStatus" class="status" aria-live="polite">Ready.</div>
+      <div class="progress-wrap">
+        <progress id="exposureProgress" max="100" value="0"></progress>
+        <span id="exposureProgressText">0%</span>
+      </div>
+      <div id="exposureSummary" class="meta"></div>
+      <div id="exposureStats" class="exposure-stats hidden"></div>
+      <h3>Results</h3>
+      <div class="table-wrap exposure-table-wrap">
+        <table id="exposureTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Cert</th>
+              <th>ID</th>
+              <th>Question (truncated)</th>
+              <th id="overlapHeader" title="Fraction of question N-grams found in real web search result snippets (Brown et al. 2020 / Wei et al. NAACL 2024)">N-gram Overlap</th>
+              <th title="Number of Brave results collected for the query">Brave Results</th>
+              <th title="Number of real web snippets collected from Brave search results">Snippets</th>
+              <th>Exposure</th>
+              <th>Links</th>
+            </tr>
+          </thead>
+          <tbody id="exposureTableBody"></tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:12px">
+        <button id="saveExposureBtn" type="button" class="secondary">Save Exposure Results</button>
+        <button id="saveExposureFullBtn" type="button" class="secondary">Save with Raw Questions</button>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="memorResultsSection" aria-labelledby="memor-title">
+      <h2 id="memor-title">Memorization Test Results</h2>
+      <div id="memorStatus" class="status" aria-live="polite">Ready.</div>
+      <div class="progress-wrap">
+        <progress id="memorProgress" max="100" value="0"></progress>
+        <span id="memorProgressText">0%</span>
+      </div>
+      <div id="memorSummary" class="meta"></div>
+      <div id="memorStats" class="exposure-stats hidden"></div>
+
+      <h3>TS-Guessing Results
+        <span class="method-tag">Deng et al., NAACL 2024</span>
+        <span class="method-note">Random baseline = 25%</span>
+      </h3>
+      <div class="table-wrap">
+        <table id="memorTSTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Cert</th><th>ID</th><th>Question</th><th>Model</th>
+              <th>Masked Option</th><th>Expected Text</th>
+              <th>Model Response</th><th>Exact Match</th><th>Norm. Match</th>
+            </tr>
+          </thead>
+          <tbody id="memorTSBody"></tbody>
+        </table>
+      </div>
+
+      <h3>Option Shuffling Results
+        <span class="method-tag">Zhou et al., 2024</span>
+      </h3>
+      <div class="table-wrap">
+        <table id="memorShuffleTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Cert</th><th>ID</th><th>Question</th><th>Model</th>
+              <th>Correct Ans.</th><th>Orig. Pred.</th><th>Orig. Correct</th>
+              <th>New Correct Label</th><th>Shuffle Pred.</th><th>Shuffle Correct</th><th>Consistent</th>
+            </tr>
+          </thead>
+          <tbody id="memorShuffleBody"></tbody>
+        </table>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <button id="saveMemorBtn" type="button" class="secondary">Save Memorization Results</button>
+      </div>
+    </section>
+
+  <script src="app.js"></script>
+</body>
+</html>
+=======
+<body>
+  <main class="container">
+    <header class="hero">
+      <div class="hero-row">
+        <h1>Construction Management Certification Exam Benchmark</h1>
+        <a
+          class="github-link"
+          href="https://github.com/ruoxinx/CMExamBench"
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label="GitHub"
+          title="GitHub"
+        >
+          <svg viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+            <path d="M8 0C3.58 0 0 3.58 0 8a8.01 8.01 0 0 0 5.47 7.59c.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.5-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82a7.5 7.5 0 0 1 4 0c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"></path>
+          </svg>
+          <span>GitHub</span>
+        </a>
+      </div>
+    </header>
+
+    <div class="layout">
+      <section class="panel" aria-labelledby="model-settings-title">
+        <h2 id="model-settings-title">Model Settings</h2>
+        <div class="grid">
+          <div class="full-width selector-grid">
+            <div class="selector-box">
+              <div class="selector-head">
+                <span>Providers</span>
+                <div class="selector-actions">
+                  <button id="providerAllBtn" type="button" class="mini">All</button>
+                  <button id="providerNoneBtn" type="button" class="mini secondary">None</button>
+                </div>
+              </div>
+              <div id="providerChecklist" class="checklist"></div>
+            </div>
+
+            <div class="selector-box">
+              <div class="selector-head">
+                <span>Models</span>
+                <div class="selector-actions">
+                  <button id="modelAllBtn" type="button" class="mini">All</button>
+                  <button id="modelNoneBtn" type="button" class="mini secondary">None</button>
+                </div>
+              </div>
+              <div id="modelChecklist" class="checklist"></div>
+            </div>
+          </div>
+
+          <label>
+            Temperature
+            <input id="temperatureInput" type="number" min="0" max="1" step="0.01" value="0" />
+          </label>
+
+          <label>
+            Running Times
+            <input id="runCountInput" type="number" min="1" max="20" step="1" value="1" />
+          </label>
+
+          <label class="full-width">
+            OpenAI API Key
+            <input id="openaiApiKeyInput" type="password" placeholder="Enter OpenAI API key" autocomplete="off" />
+          </label>
+
+          <label class="full-width">
+            Anthropic API Key
+            <input id="anthropicApiKeyInput" type="password" placeholder="Enter Anthropic API key" autocomplete="off" />
+          </label>
+
+          <label class="checkbox-row">
+            <input id="showApiKeysToggle" type="checkbox" />
+            Show API keys
+          </label>
+        </div>
+
+        <p class="note">Each submission starts a new chat session (no memory/history).</p>
+
+        <h3>Example Request Body</h3>
+        <pre id="requestExample" class="example"></pre>
+      </section>
+
+      <section class="panel" aria-labelledby="input-title">
+        <h2 id="input-title">Input</h2>
+
+        <div class="mode-switch" role="group" aria-label="Input mode">
+          <button id="singleModeBtn" type="button" class="mode-btn active" aria-pressed="true">Single Question</button>
+          <button id="batchModeBtn" type="button" class="mode-btn" aria-pressed="false">Batch Evaluation</button>
+        </div>
+
+        <div id="singleInputSection">
+          <label>
+            <textarea id="promptInput" rows="8" placeholder="Ask a question..."></textarea>
+          </label>
+
+          <label>
+            Images (optional, multiple)
+            <input id="imageInput" type="file" accept="image/*" multiple />
+          </label>
+          <div id="imageList" class="file-list">No images selected.</div>
+          <div id="imagePreview" class="image-preview" aria-live="polite"></div>
+        </div>
+
+        <div id="batchInputSection" class="hidden">
+          <label>
+            Upload JSONL file(s)
+            <input id="jsonlFileInput" type="file" accept=".jsonl,application/jsonl,text/plain" multiple />
+          </label>
+          <div id="jsonlFileList" class="jsonl-list">No JSONL files selected.</div>
+          <label>
+            Batch Image Base Path
+            <input id="batchImageBaseInput" type="text" placeholder="/cert_eval/" value="/cert_eval/" />
+          </label>
+          <div class="note">Batch uses all questions in uploaded JSONL files.</div>
+          <div id="batchPreview" class="batch-preview">No JSONL file loaded.</div>
+        </div>
+
+        <div class="actions">
+          <button id="submitBtn" type="button">Run</button>
+          <button id="runBatchBtn" type="button">Run Batch</button>
+          <button id="stopBtn" type="button" class="danger" disabled>Stop</button>
+          <button id="saveBtn" type="button" class="secondary">Save Results</button>
+          <button id="resetBtn" type="button" class="secondary">Reset</button>
+        </div>
+        <label class="checkbox-row actions-note">
+          <input id="structuredOutputToggle" type="checkbox" />
+          Enforce Structured Output (answer and explanation)
+        </label>
+      </section>
+    </div>
+
+    <section class="panel" aria-labelledby="output-title">
+      <h2 id="output-title">Output</h2>
+      <div id="status" class="status" aria-live="polite">Idle</div>
+      <div class="progress-wrap">
+        <progress id="batchProgress" max="100" value="0"></progress>
+        <span id="batchProgressText">0%</span>
+      </div>
+      <pre id="outputBox" class="output" tabindex="0"></pre>
+      <div id="meta" class="meta"></div>
+      <h3>Result Table</h3>
+      <div class="table-wrap">
+        <table id="resultTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Source</th>
+              <th>Question ID</th>
+              <th>Provider</th>
+              <th>Model</th>
+              <th>Run</th>
+              <th>Latency (ms)</th>
+              <th>Expected</th>
+              <th>Predicted</th>
+            </tr>
+          </thead>
+          <tbody id="resultTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
+>>>>>>> b09d56886833f2a6d48ed390429c6e9851b18ea0
