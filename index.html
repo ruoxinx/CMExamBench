@@ -93,6 +93,8 @@
         <div class="mode-switch" role="group" aria-label="Input mode">
           <button id="singleModeBtn" type="button" class="mode-btn active" aria-pressed="true">Single Question</button>
           <button id="batchModeBtn" type="button" class="mode-btn" aria-pressed="false">Batch Evaluation</button>
+          <button id="exposureModeBtn" type="button" class="mode-btn" aria-pressed="false">Exposure Search</button>
+          <button id="memorModeBtn"   type="button" class="mode-btn" aria-pressed="false">Memorization Test</button>
         </div>
 
         <div id="singleInputSection">
@@ -122,9 +124,103 @@
           <div id="batchPreview" class="batch-preview">No JSONL file loaded.</div>
         </div>
 
+        <div id="exposureInputSection" class="hidden">
+          <div class="exposure-settings">
+            <div class="cert-selector">
+              <span class="field-label">Certification Datasets</span>
+              <div class="cert-checks">
+                <label class="checkbox-row"><input type="checkbox" class="cert-check" value="CAC" checked /> CAC (100 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="cert-check" value="CACM" checked /> CACM (50 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="cert-check" value="CCM" checked /> CCM (50 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="cert-check" value="CPC" checked /> CPC (489 q)</label>
+              </div>
+            </div>
+            <div class="exposure-params">
+              <label>
+                Sample Size
+                <input id="exposureSampleSize" type="number" min="1" max="500" step="1" value="100" />
+              </label>
+              <label>
+                Random Seed
+                <input id="exposureSeed" type="number" min="0" step="1" value="42" title="Fixed seed ensures the same questions are drawn each run" />
+              </label>
+              <label>
+                Query Length (chars)
+                <input id="exposureQueryLen" type="number" min="30" max="200" step="10" value="120" />
+              </label>
+              <label title="N-gram window size. Brown et al. (2020) use N=13 for full documents; N=8 suits shorter exam questions.">
+                N-gram Size (N)
+                <input id="exposureNgramN" type="number" min="3" max="13" step="1" value="8" />
+              </label>
+            </div>
+            <div class="exposure-engines">
+              <span class="field-label">Search Engines</span>
+              <label class="checkbox-row">
+                <input type="checkbox" id="useDDGSearch" checked />
+                DuckDuckGo Instant Answers (free, no key — knowledge graph only, rarely returns snippets for exam questions)
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="useGoogleSearch" />
+                Google Custom Search (API key + CX required — 100 free queries/day, returns real web snippets)
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="useBingSearch" />
+                Bing Web Search (API key required — returns real web snippets)
+              </label>
+            </div>
+            <div id="googleKeyRow" class="hidden engine-key-group">
+              <label class="full-width">
+                Google API Key
+                <input id="googleApiKeyInput" type="password" placeholder="Enter Google API key (console.cloud.google.com)" autocomplete="off" />
+              </label>
+              <label class="full-width">
+                Google Custom Search Engine ID (cx)
+                <input id="googleCxInput" type="text" placeholder="e.g. 012345678901234567890:abcdefghijk" autocomplete="off" />
+              </label>
+            </div>
+            <label id="bingKeyRow" class="full-width hidden">
+              Bing Search API Key
+              <input id="bingApiKeyInput" type="password" placeholder="Enter Bing Search API key" autocomplete="off" />
+            </label>
+            <p class="note">For N-gram overlap to be non-zero, enable Google or Bing — DDG Instant Answers rarely returns page snippets for specialized exam questions. Google Custom Search: create a key at console.cloud.google.com and a search engine at programmablesearchengine.google.com (set to search the entire web).</p>
+          </div>
+        </div>
+
+        <div id="memorInputSection" class="hidden">
+          <div class="exposure-settings">
+            <div class="cert-selector">
+              <span class="field-label">Certification Datasets</span>
+              <div class="cert-checks">
+                <label class="checkbox-row"><input type="checkbox" class="memor-cert-check" value="CAC"  checked /> CAC (100 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="memor-cert-check" value="CACM" checked /> CACM (50 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="memor-cert-check" value="CCM"  checked /> CCM (50 q)</label>
+                <label class="checkbox-row"><input type="checkbox" class="memor-cert-check" value="CPC"  checked /> CPC (489 q)</label>
+              </div>
+            </div>
+            <div class="exposure-params">
+              <label>Sample Size <input id="memorSampleSize" type="number" min="1" max="200" step="1" value="50" /></label>
+              <label>Random Seed <input id="memorSeed"       type="number" min="0" step="1"   value="42" title="Same seed as Exposure Search for comparable samples" /></label>
+            </div>
+            <div class="exposure-engines">
+              <span class="field-label">Tests to Run</span>
+              <label class="checkbox-row">
+                <input type="checkbox" id="runTSGuessing" checked />
+                TS-Guessing — mask correct option, model fills blank (Deng et al., NAACL 2024)
+              </label>
+              <label class="checkbox-row">
+                <input type="checkbox" id="runOptionShuffle" checked />
+                Option Shuffling — permute A/B/C/D labels, compare accuracy (Zhou et al., 2024)
+              </label>
+            </div>
+            <p class="note">Uses the model(s) selected in Model Settings. Only questions with an "answer" field are tested. Random baseline for 4-choice TS-Guessing = 25%.</p>
+          </div>
+        </div>
+
         <div class="actions">
           <button id="submitBtn" type="button">Run</button>
           <button id="runBatchBtn" type="button">Run Batch</button>
+          <button id="runExposureBtn" type="button" class="hidden">Run Exposure Search</button>
+          <button id="runMemorBtn"    type="button" class="hidden">Run Memorization Test</button>
           <button id="stopBtn" type="button" class="danger" disabled>Stop</button>
           <button id="saveBtn" type="button" class="secondary">Save Results</button>
           <button id="resetBtn" type="button" class="secondary">Reset</button>
@@ -165,6 +261,88 @@
       </div>
     </section>
   </main>
+
+    <section class="panel hidden" id="exposureResultsSection" aria-labelledby="exposure-results-title">
+      <h2 id="exposure-results-title">Exposure Search Results</h2>
+      <div id="exposureStatus" class="status" aria-live="polite">Ready.</div>
+      <div class="progress-wrap">
+        <progress id="exposureProgress" max="100" value="0"></progress>
+        <span id="exposureProgressText">0%</span>
+      </div>
+      <div id="exposureSummary" class="meta"></div>
+      <div id="exposureStats" class="exposure-stats hidden"></div>
+      <h3>Results</h3>
+      <div class="table-wrap exposure-table-wrap">
+        <table id="exposureTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Cert</th>
+              <th>ID</th>
+              <th>Question (truncated)</th>
+              <th id="overlapHeader" title="Fraction of question N-grams found in search result snippets (Brown et al. 2020 / Wei et al. NAACL 2024)">N-gram Overlap</th>
+              <th title="Bing estimated total results for the query (unquoted) — web topic presence indicator">Bing Est. Results</th>
+              <th title="DuckDuckGo returned a knowledge-base abstract for this query">DDG Abstract</th>
+              <th title="Number of text snippets collected from search results — overlap is only meaningful when snippets > 0">Snippets</th>
+              <th>Exposure</th>
+              <th>Links</th>
+            </tr>
+          </thead>
+          <tbody id="exposureTableBody"></tbody>
+        </table>
+      </div>
+      <div class="actions" style="margin-top:12px">
+        <button id="saveExposureBtn" type="button" class="secondary">Save Exposure Results</button>
+        <button id="saveExposureFullBtn" type="button" class="secondary">Save with Raw Questions</button>
+      </div>
+    </section>
+
+    <section class="panel hidden" id="memorResultsSection" aria-labelledby="memor-title">
+      <h2 id="memor-title">Memorization Test Results</h2>
+      <div id="memorStatus" class="status" aria-live="polite">Ready.</div>
+      <div class="progress-wrap">
+        <progress id="memorProgress" max="100" value="0"></progress>
+        <span id="memorProgressText">0%</span>
+      </div>
+      <div id="memorSummary" class="meta"></div>
+      <div id="memorStats" class="exposure-stats hidden"></div>
+
+      <h3>TS-Guessing Results
+        <span class="method-tag">Deng et al., NAACL 2024</span>
+        <span class="method-note">Random baseline = 25%</span>
+      </h3>
+      <div class="table-wrap">
+        <table id="memorTSTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Cert</th><th>ID</th><th>Question</th><th>Model</th>
+              <th>Masked Option</th><th>Expected Text</th>
+              <th>Model Response</th><th>Exact Match</th><th>Norm. Match</th>
+            </tr>
+          </thead>
+          <tbody id="memorTSBody"></tbody>
+        </table>
+      </div>
+
+      <h3>Option Shuffling Results
+        <span class="method-tag">Zhou et al., 2024</span>
+      </h3>
+      <div class="table-wrap">
+        <table id="memorShuffleTable" class="result-table">
+          <thead>
+            <tr>
+              <th>Cert</th><th>ID</th><th>Question</th><th>Model</th>
+              <th>Correct Ans.</th><th>Orig. Pred.</th><th>Orig. Correct</th>
+              <th>New Correct Label</th><th>Shuffle Pred.</th><th>Shuffle Correct</th><th>Consistent</th>
+            </tr>
+          </thead>
+          <tbody id="memorShuffleBody"></tbody>
+        </table>
+      </div>
+
+      <div class="actions" style="margin-top:12px">
+        <button id="saveMemorBtn" type="button" class="secondary">Save Memorization Results</button>
+      </div>
+    </section>
 
   <script src="app.js"></script>
 </body>
