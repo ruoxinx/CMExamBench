@@ -15,7 +15,7 @@ This web application evaluates OpenAI and Anthropic models using single prompts 
 - [Run a Single Question](#run-a-single-question)
 - [Run Batch from JSONL](#run-batch-from-jsonl)
 - [JSONL Format (expected)](#jsonl-format-expected)
-- [Recommended file layout (to avoid missing images)](#recommended-file-layout-to-avoid-missing-images)
+- [Recommended file layout](#recommended-file-layout)
 - [Extend to More Models](#extend-to-more-models)
 - [Resource access](#resource-access)
 - [More Information](#more-information)
@@ -102,7 +102,7 @@ Notes:
 - A ready-to-run toy sample is included at `cert_eval/data/example_format.jsonl` with image `cert_eval/data/images/toy_blocks.png`.
 
 
-### Recommended file layout (to avoid missing images)
+### Recommended file layout
 
 Keep JSONL and image files under the same served root so relative URIs resolve consistently.
 
