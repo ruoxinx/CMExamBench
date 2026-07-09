@@ -3,118 +3,18 @@ import json
 import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.error import HTTPError, URLError
-from urllib.parse import parse_qs, quote_plus, urlparse
 from urllib.request import Request, urlopen
 
 
 ANTHROPIC_MESSAGES_URL = "https://api.anthropic.com/v1/messages"
-DUCKDUCKGO_API_URL = "https://api.duckduckgo.com/"
-BING_SEARCH_API_URL = "https://api.bing.microsoft.com/v7.0/search"
-BRAVE_SEARCH_API_URL = "https://api.search.brave.com/res/v1/web/search"
 
 
 class ProxyHandler(SimpleHTTPRequestHandler):
-    def do_GET(self):
-        if self.path.startswith("/api/search"):
-            self._handle_search_proxy()
-            return
-        super().do_GET()
-
     def do_POST(self):
         if self.path == "/api/anthropic/messages":
             self._handle_anthropic_proxy()
             return
         self.send_error(404, "Not found")
-
-    def _handle_search_proxy(self):
-        parsed = urlparse(self.path)
-        params = parse_qs(parsed.query)
-        query = params.get("q", [""])[0].strip()
-        engine = params.get("engine", ["duckduckgo"])[0].lower()
-        count = params.get("count", ["10"])[0]
-
-        if not query:
-            self._send_json(400, {"error": {"message": "Missing q parameter"}})
-            return
-
-        if engine == "duckduckgo":
-            url = (
-                f"{DUCKDUCKGO_API_URL}?q={quote_plus(query)}"
-                "&format=json&no_html=1&skip_disambig=1"
-            )
-            req = Request(url, headers={"User-Agent": "CMExamBench/1.0 (research)"})
-            try:
-                with urlopen(req, timeout=15) as resp:
-                    body = resp.read()
-                    data = json.loads(body.decode("utf-8", errors="replace"))
-                    self._send_json(200, data)
-            except Exception as e:
-                self._send_json(502, {"error": {"message": f"DuckDuckGo error: {e}"}})
-
-        elif engine == "bing":
-            bing_key = self.headers.get("x-bing-key", "").strip()
-            if not bing_key:
-                self._send_json(400, {"error": {"message": "Missing x-bing-key header"}})
-                return
-            url = (
-                f"{BING_SEARCH_API_URL}?q={quote_plus(query)}"
-                f"&count={count}&mkt=en-US&responseFilter=Webpages"
-            )
-            req = Request(url, headers={"Ocp-Apim-Subscription-Key": bing_key})
-            try:
-                with urlopen(req, timeout=15) as resp:
-                    body = resp.read()
-                    data = json.loads(body.decode("utf-8", errors="replace"))
-                    self._send_json(200, data)
-            except HTTPError as e:
-                try:
-                    err_body = e.read()
-                    parsed_err = json.loads(err_body.decode("utf-8", errors="replace"))
-                except Exception:
-                    parsed_err = {"error": {"message": f"Bing HTTP {e.code}"}}
-                self._send_json(e.code, parsed_err)
-            except Exception as e:
-                self._send_json(502, {"error": {"message": f"Bing error: {e}"}})
-        elif engine == "brave":
-            brave_key = (
-                self.headers.get("x-brave-key", "").strip()
-                or params.get("brave_key", [""])[0].strip()
-            )
-            if not brave_key:
-                self._send_json(400, {"error": {"message": "Missing Brave Search API key"}})
-                return
-            url = (
-                f"{BRAVE_SEARCH_API_URL}?q={quote_plus(query)}"
-                f"&count={count}&country=us&search_lang=en"
-            )
-            req = Request(
-                url,
-                headers={
-                    "User-Agent": "CMExamBench/1.0 (research)",
-                    "Accept": "application/json",
-                    "X-Subscription-Token": brave_key,
-                },
-            )
-            try:
-                with urlopen(req, timeout=15) as resp:
-                    body = resp.read()
-                    text = body.decode("utf-8", errors="replace")
-                    data = json.loads(text)
-                    self._send_json(200, data)
-            except HTTPError as e:
-                try:
-                    err_body = e.read()
-                    err_text = err_body.decode("utf-8", errors="replace")
-                    parsed_err = json.loads(err_text)
-                except Exception:
-                    parsed_err = {"error": {"message": f"Brave HTTP {e.code}: {err_text[:300] if 'err_text' in locals() else ''}".strip()}}
-                self._send_json(e.code, parsed_err)
-            except json.JSONDecodeError:
-                self._send_json(502, {"error": {"message": f"Brave returned non-JSON response"}})
-            except Exception as e:
-                self._send_json(502, {"error": {"message": f"Brave error: {e}"}})
-        else:
-            self._send_json(400, {"error": {"message": f"Unsupported engine: {engine}"}})
 
     def _handle_anthropic_proxy(self):
         content_length = int(self.headers.get("Content-Length", "0"))
